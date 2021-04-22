@@ -1,64 +1,102 @@
 import React from "react";
+import Chart from "chart.js/auto";
 import axios from "axios";
-import { Chart } from "chart.js";
 
+
+let style = {width: "200px"}
 class ChartBox extends React.Component {
   state = {
-    data: [],
-    chart: "",
+    dates: [],
+    values: [],
+    filter: {
+      startDate: '',
+      endDate: '',
+      currency: '',
+    }
   };
 
-  componentDidMount = async () => {
+  componentDidUpdate = async () => {
     try {
-      const downloadedData = await axios.get(
-        "http://api.coindesk.com/v1/bpi/historical/close.json"
+      const response = await axios.get(
+        "https://api.coindesk.com/v1/bpi/historical/close.json"
       );
-      this.setState({ data: downloadedData.data.bpi });
-      this.renderGraph();
+
+      console.log(response);
+
+      this.setState({
+        dates: Object.keys(response.data.bpi),
+        values: Object.values(response.data.bpi),
+      });
+
+      this.renderChart();
     } catch (err) {
       console.error(err);
     }
   };
 
-  componentDidUpdate = async (prevProps, prevState) => {
-    if (prevState.chart !== this.state.chart) {
-      this.renderGraph();
-    }
-  };
-
-  renderGraph = () => {
-    let ctx = document.getElementById("myChart");
-    let myChart = new Chart(ctx, {
-      type: "bar",
+  renderChart = () => {
+    const ctx = document.getElementById("chart").getContext("2d");
+    new Chart(ctx, {
+      type: "line",
       data: {
-        labels: [1, 2, 3],
+        labels: this.state.dates,
         datasets: [
           {
-            label: "Transactions in the period",
-            data: [1, 2, 3],
-            backgroundColor: "#5EBA7D",
+            label: "Bitcoin Price",
+            data: this.state.values,
+            borderColor: ["#ff00ff"],
+            backgroundColor: ["#ff00ff"],
+            
             borderWidth: 1,
           },
         ],
       },
       options: {
         scales: {
-          yAxes: [
-            {
-              ticks: {
-                beginAtZero: true,
-              },
-            },
-          ],
+          y: {
+            beginAtZero: true,
+          },
         },
       },
     });
-    this.setState({ chart: myChart });
   };
 
+  handleChange = (event) => {
+    const clone = { ...this.state };
+
+    clone.filter = { ...clone.filter, [event.target.name]: event.target.value };
+
+    this.setState({ ...clone});
+  }
+
   render() {
-    console.log(this.state.chart);
-    return <canvas id="myChart" style={{ width: "200px" }}></canvas>;
+    console.log(this.state);
+    return (
+      <div className="container">
+        <div className="form-group">
+          <label>Starting date</label>
+          <input
+            type="date"
+            className="form-control"
+            name="startDate"
+            onChange={this.handleChange}
+            value={this.state.filter.startDate}
+          />
+        </div>
+
+        <div className="form-group">
+          <label>Ending date</label>
+          <input
+            type="date"
+            className="form-control"
+            name="endDate"
+            onChange={this.handleChange}
+            value={this.state.filter.endDate}
+          />
+        </div>
+        <canvas id="chart" width="200px"></canvas>
+      </div>
+    );
   }
 }
 
